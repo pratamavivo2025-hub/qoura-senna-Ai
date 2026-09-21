@@ -86,7 +86,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("🐋 Quora Senna LIQ v3.0")
-st.caption("Analis Keuangan, Saham & Kripto Objektif | Powered by Gemini")
+st.caption("Ai Ahli Analis Keuangan, Saham & Kripto Objektif | Powered by Senna.inc Gugu")
 
 # ---------------------------------------------------------
 # 2. INISIALISASI SESSION STATE (RIWAYAT OBROLAN LOKAL)
