@@ -87,3 +87,4 @@ if prompt := st.chat_input("Tanyakan sesuatu atau minta analisis tesis..."):
 
         except Exception as e:
             st.error(f"Terjadi Kesalahan: {str(e)}")
+
