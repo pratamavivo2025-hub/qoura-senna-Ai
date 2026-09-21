@@ -52,14 +52,25 @@ st.markdown(f"""
         color: {text_color} !important;
     }}
 
-    /* 2. Sembunyikan elemen header Streamlit yang mengganggu, KECUALI tombol sidebar (>>) */
+    /* 2. Hanya sembunyikan toolbar kanan (Share, Star, Edit, GitHub), TAPI TETAP TAMPILKAN tombol sidebar (>>) */
     [data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
     
-    [data-testid="stElementToolbar"], 
-    .stAppHeader button:not([aria-label="Open sidebar"]):not([aria-label="Close sidebar"]) {{
+    [data-testid="stElementToolbar"] {{
         display: none !important;
+    }}
+    
+    /* Tampilkan kembali tombol pembuka sidebar (Sidebar Nav Control / >>) */
+    [data-testid="stSidebarNavItems"], 
+    [data-testid="stHeaderNav"], 
+    button[aria-label="Open sidebar"], 
+    button[aria-label="Close sidebar"], 
+    button[data-testid="stSidebarCollapsedControl"],
+    div[data-testid="collapsedControl"] {{
+        display: flex !important;
+        visibility: visible !important;
+        z-index: 999999 !important;
     }}
     
     #MainMenu, footer, [data-testid="stAppToolbar"], .viewerBadge_container__1v12u {{
@@ -291,7 +302,7 @@ uploaded_file = st.file_uploader(
     type=["pdf", "png", "jpg", "jpeg"]
 )
 
-chat_input_val = st.chat_input("Tanyakan sesuatu")
+chat_input_val = st.chat_input("Tanyakan sesuatu pada Ai")
 prompt = chat_input_val or st.session_state.pending_prompt
 
 if prompt:
