@@ -7,36 +7,43 @@ from google.genai import types
 # 1. KONFIGURASI HALAMAN STREAMLIT
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Quora Senna LIQ",
+    page_title="Quora Senna LIQ v3.0",
     page_icon="📈",
     layout="centered"
 )
 
-# Custom CSS untuk UI Clean, Chat Bubble Kanan-Kiri, dan Tampilan Elegan
+# Fix Pull-To-Refresh, Styling Chat Bubble Kanan-Kiri, dan UI Clean
 st.markdown("""
 <style>
-    /* Styling utama area obrolan */
+    /* 1. Mencegah efek tarik layar / Pull-To-Refresh di HP/WebView */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        overscroll-behavior-y: contain !important;
+        overscroll-behavior: none !important;
+        touch-action: pan-x pan-y !important;
+    }
+
+    /* 2. Styling Card Chat Bubble */
     .stChatMessage {
         border-radius: 16px;
         padding: 12px 18px;
         margin-bottom: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
-    /* Bubble Chat User (Kanan & Aksesibel) */
-    div[data-testid="stChatMessage"]:nth-child(even) {
+    /* Bubble Chat User (Kanan) */
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
         flex-direction: row-reverse;
         text-align: left;
-        background-color: #1e293b;
-        color: #f8fafc;
-        border: 1px solid #334155;
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+        border: 1px solid #334155 !important;
     }
 
     /* Bubble Chat Assistant / AI (Kiri) */
-    div[data-testid="stChatMessage"]:nth-child(odd) {
-        background-color: #0f172a;
-        color: #e2e8f0;
-        border: 1px solid #1e293b;
+    div[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
+        background-color: #0f172a !important;
+        color: #e2e8f0 !important;
+        border: 1px solid #1e293b !important;
     }
 
     /* Merapikan Uploader File */
@@ -47,17 +54,29 @@ st.markdown("""
         background-color: #0f172a;
     }
 
-    /* Menyembunyikan elemen bawaan Streamlit yang kaku */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
+
+<script>
+    // Mematikan gesture pull-down refresh secara paksa di level browser/WebView
+    window.addEventListener('DOMContentLoaded', (event) => {
+        document.body.style.overscrollBehaviorY = 'contain';
+    });
+</script>
 """, unsafe_allow_html=True)
 
-st.title("📈 Quora Senna LIQ")
+st.title("📈 Quora Senna LIQ v3.0")
 st.caption("Analis Keuangan, Saham & Kripto Objektif | Powered by Gemini")
 
 # ---------------------------------------------------------
-# 2. SIDEBAR KONFIGURASI & MANAGEMENT MEMORI
+# 2. INISIALISASI SESSION STATE (RIWAYAT OBROLAN LOKAL)
+# ---------------------------------------------------------
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# ---------------------------------------------------------
+# 3. SIDEBAR KONFIGURASI & RIWAYAT OBROLAN
 # ---------------------------------------------------------
 with st.sidebar:
     st.header("⚙️ Konfigurasi & Fitur")
@@ -66,21 +85,38 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("💬 Manajemen Obrolan")
     
-    if st.button("➕ Chat Baru / Reset Memori", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("➕ Chat Baru", use_container_width=True):
+            st.session_state.messages = []
+            st.rerun()
+    with col2:
+        if st.button("🗑️ Hapus Chat", use_container_width=True):
+            st.session_state.messages = []
+            st.rerun()
+
+    st.markdown("---")
+    st.subheader("📜 Ringkasan Riwayat Sesi")
+    if len(st.session_state.messages) == 0:
+        st.info("Belum ada riwayat obrolan di sesi ini.")
+    else:
+        # Menampilkan ringkasan pertanyaan user sebelumnya di sidebar
+        user_prompts = [m["content"] for m in st.session_state.messages if m["role"] == "user"]
+        for idx, prompt_text in enumerate(user_prompts, 1):
+            short_text = prompt_text[:30] + "..." if len(prompt_text) > 30 else prompt_text
+            st.caption(f"**{idx}.** {short_text}")
 
     st.markdown("---")
     st.markdown("""
-    **Fitur Utama Version 2.0:**
-    - 📄 Dukungan Laporan Keuangan (PDF / Foto)
-    - 🧠 Memori Chat Berkelanjutan
-    - ⚡ Penanganan Server Padat (Auto-Fallback)
-    - 📊 Analisis Rasio & Valuasi Komprehensif
+    **Fitur Utama Version 3.0:**
+    - 🔒 Anti-Refresh Saat Scroll Ke Atas
+    - 📄 Dokumen PDF & Screenshot Laporan Keuangan
+    - 🧠 Memori Obrolan Berkelanjutan
+    - ⚡ Auto-Fallback Server Gemini
     """)
 
 # ---------------------------------------------------------
-# 3. SYSTEM INSTRUCTION (PERSONA GAUL, CERDAS & ADAPTIF)
+# 4. SYSTEM INSTRUCTION (PERSONA GAUL, CERDAS & ADAPTIF)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
 Kamu adalah "Quora Senna LIQ", seorang analis senior independen di bidang investasi saham, kripto, dan akuntansi forensik.
@@ -97,18 +133,14 @@ Logika & Cara Berpikir:
 """
 
 # ---------------------------------------------------------
-# 4. INISIALISASI SESSION STATE (RIWAYAT OBROLAN)
+# 5. MENAMPILKAN ULANG SEMUA CHAT DI LAYAR UTAMA
 # ---------------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Tampilkan seluruh riwayat obrolan di layar
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # ---------------------------------------------------------
-# 5. INPUT FILE & CHAT
+# 6. INPUT FILE & PROMPT
 # ---------------------------------------------------------
 uploaded_file = st.file_uploader(
     "Upload PDF atau Foto Laporan Keuangan (Opsional)", 
@@ -119,7 +151,7 @@ if prompt := st.chat_input("Tanyakan sesuatu atau minta analisis tesis..."):
     if not api_key_input:
         st.error("Masukkan Gemini API Key kamu di sidebar dulu ya, bro!")
     else:
-        # Simpan pesan user
+        # Simpan pesan user ke memori
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -139,7 +171,7 @@ if prompt := st.chat_input("Tanyakan sesuatu atau minta analisis tesis..."):
                     contents.append(uploaded_doc)
                     os.remove(temp_path)
 
-            # Memasukkan riwayat percakapan sebelumnya sebagai konteks memori
+            # Memasukkan riwayat percakapan sebelumnya sebagai konteks memori AI
             for msg in st.session_state.messages[:-1]:
                 contents.append(f"{msg['role'].capitalize()}: {msg['content']}")
             
@@ -172,10 +204,11 @@ if prompt := st.chat_input("Tanyakan sesuatu atau minta analisis tesis..."):
             with st.chat_message("assistant"):
                 st.markdown(reply)
             
-            # Simpan balasan AI ke memori riwayat
+            # Simpan balasan AI ke memori
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
         except Exception as e:
             st.error(f"Terjadi Kesalahan: {str(e)}")
+
 
 
