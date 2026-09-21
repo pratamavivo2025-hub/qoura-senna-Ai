@@ -8,21 +8,21 @@ from google.genai import types
 # ---------------------------------------------------------
 st.set_page_config(
     page_title="Quora Senna LIQ v3.0",
-    page_icon="📈",
+    page_icon="🐋",
     layout="centered"
 )
 
-# Fix Pull-To-Refresh, Styling Chat Bubble Kanan-Kiri, dan UI Clean
+# Fix Pull-To-Refresh di WebView APK, Styling Chat Bubble Kanan-Kiri, dan UI Clean
 st.markdown("""
 <style>
-    /* 1. Mencegah efek tarik layar / Pull-To-Refresh di HP/WebView */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-        overscroll-behavior-y: contain !important;
+    /* Mencegah efek tarik layar / Pull-To-Refresh di Android WebView */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {
+        overscroll-behavior-y: none !important;
         overscroll-behavior: none !important;
         touch-action: pan-x pan-y !important;
     }
 
-    /* 2. Styling Card Chat Bubble */
+    /* Styling Card Chat Bubble */
     .stChatMessage {
         border-radius: 16px;
         padding: 12px 18px;
@@ -59,14 +59,33 @@ st.markdown("""
 </style>
 
 <script>
-    // Mematikan gesture pull-down refresh secara paksa di level browser/WebView
-    window.addEventListener('DOMContentLoaded', (event) => {
-        document.body.style.overscrollBehaviorY = 'contain';
-    });
+    // Mematikan gesture pull-down refresh secara paksa saat scroll di posisi paling atas
+    (function() {
+        let startY = 0;
+        
+        window.addEventListener('touchstart', function(e) {
+            if (e.touches && e.touches.length > 0) {
+                startY = e.touches[0].pageY;
+            }
+        }, { passive: false });
+
+        window.addEventListener('touchmove', function(e) {
+            if (!e.touches || e.touches.length === 0) return;
+            let currentY = e.touches[0].pageY;
+            let container = document.querySelector('[data-testid="stAppViewContainer"]') || document.documentElement;
+            
+            // Jika posisi scroll paling atas dan jari ditarik KE BAWAH: tahan agar tidak refresh APK!
+            if (container.scrollTop <= 0 && currentY > startY) {
+                if (e.cancelable) {
+                    e.preventDefault();
+                }
+            }
+        }, { passive: false });
+    })();
 </script>
 """, unsafe_allow_html=True)
 
-st.title("📈 Quora Senna LIQ v3.0")
+st.title("🐋 Quora Senna LIQ v3.0")
 st.caption("Analis Keuangan, Saham & Kripto Objektif | Powered by Gemini")
 
 # ---------------------------------------------------------
@@ -209,6 +228,5 @@ if prompt := st.chat_input("Tanyakan sesuatu atau minta analisis tesis..."):
 
         except Exception as e:
             st.error(f"Terjadi Kesalahan: {str(e)}")
-
 
 
