@@ -7,8 +7,8 @@ from google.genai import types
 # 1. KONFIGURASI HALAMAN STREAMLIT
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Quora Senna LIQ",
-    page_icon="🐋",
+    page_title="Quora Senna Core AGI",
+    page_icon="🧠",
     layout="centered"
 )
 
@@ -52,7 +52,7 @@ st.markdown(f"""
         color: {text_color} !important;
     }}
 
-    /* 2. Hanya sembunyikan toolbar kanan (Share, Star, Edit, GitHub), TAPI TETAP TAMPILKAN tombol sidebar (>>) */
+    /* 2. Sembunyikan toolbar kanan, TAPI TETAP TAMPILKAN tombol sidebar (>>) */
     [data-testid="stHeader"] {{
         background-color: transparent !important;
     }}
@@ -61,7 +61,7 @@ st.markdown(f"""
         display: none !important;
     }}
     
-    /* Tampilkan kembali tombol pembuka sidebar (Sidebar Nav Control / >>) */
+    /* Menampilkan tombol sidebar (>>) */
     [data-testid="stSidebarNavItems"], 
     [data-testid="stHeaderNav"], 
     button[aria-label="Open sidebar"], 
@@ -126,15 +126,15 @@ st.markdown(f"""
 
     /* 5. Typography Modern */
     .app-title {{
-        font-size: 2rem;
+        font-size: 2.2rem;
         font-weight: 800;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.8px;
         margin-bottom: 4px;
         color: {text_color};
     }}
     
     .app-caption {{
-        font-size: 0.9rem;
+        font-size: 0.92rem;
         color: {subtext_color};
         margin-bottom: 20px;
     }}
@@ -152,7 +152,7 @@ st.markdown(f"""
         }}, {{ passive: false }});
 
         window.addEventListener('touchmove', function(e) {{
-            if (!e.touches || e.touches.length === 0) return;
+            if (!e.touches || e.touches.length === 0) {{ return; }}
             let currentY = e.touches[0].pageY;
             let container = document.querySelector('[data-testid="stAppViewContainer"]') || document.documentElement;
             
@@ -167,10 +167,10 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# HEADER APLIKASI (BRANDING SENNA INC.)
+# HEADER APLIKASI (BRANDING CORE AGI)
 # ---------------------------------------------------------
-st.markdown('<div class="app-title">🐋 Quora Senna LIQ v3.1</div>', unsafe_allow_html=True)
-st.markdown('<div class="app-caption">Ai Ahli Analis Keuangan, Saham & Kripto Objektif | Senna Inc.</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-title">🧠 Quora Senna Core AGI</div>', unsafe_allow_html=True)
+st.markdown('<div class="app-caption">Artificial General Intelligence Engine & Universal Analytical System | Senna Inc.</div>', unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 3. INISIALISASI SESSION STATE & PENDING PROMPT
@@ -185,7 +185,7 @@ if "pending_prompt" not in st.session_state:
 # 4. SIDEBAR KONFIGURASI, TEMA, TOOLS & RIWAYAT OBROLAN
 # ---------------------------------------------------------
 with st.sidebar:
-    st.header("⚙️ Setelan & Akses Key")
+    st.header("⚙️ AGI Control & Access")
     api_key_input = st.text_input("Masukan Gemini API Key:", type="password")
     
     # --- FITUR TEMA SWITCHER ---
@@ -201,7 +201,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.subheader("🛠️ Tools Investasi (v3.1)")
+    st.subheader("🛠️ Modul Spesialis Senna")
     
     # --- FITUR 1: PORTFOLIO REBALANCING & ALLOCATION DRAFTER ---
     with st.expander("📊 Rebalancing & Alokasi Modal", expanded=False):
@@ -261,9 +261,9 @@ with st.sidebar:
             st.rerun()
 
     st.markdown("---")
-    st.subheader("📜 Ringkasan Sesi")
+    st.subheader("📜 Riwayat Kontekstual AGI")
     if len(st.session_state.messages) == 0:
-        st.info("Belum ada riwayat obrolan di sesi ini.")
+        st.info("Sistem AGI dalam kondisi idle (belum ada sesi).")
     else:
         user_prompts = [m["content"] for m in st.session_state.messages if m["role"] == "user"]
         for idx, prompt_text in enumerate(user_prompts, 1):
@@ -271,20 +271,31 @@ with st.sidebar:
             st.caption(f"**{idx}.** {short_text}")
 
 # ---------------------------------------------------------
-# 5. SYSTEM INSTRUCTION (PERSONA GAUL, CERDAS & ADAPTIF)
+# 5. AGI CORE SYSTEM INSTRUCTION (NAMA: SENNA)
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-Kamu adalah "Quora Senna LIQ", seorang analis senior independen di bidang investasi saham, kripto, dan akuntansi forensik dikembangkan oleh Senna Inc.
+Nama kamu adalah "Senna", sebuah entitas Artificial General Intelligence (AGI) mutakhir dalam sistem "Quora Senna Core AGI" yang dikembangkan oleh Senna Inc.
 
-Gaya Bahasa & Tone:
-- Gunakan bahasa yang gaul, santai, tapi tetap berbobot, tajam, dan profesional (menggunakan variasi 'gw/lu', 'bro', atau bahasa kasual finansial yang luwes).
-- Tetap brutal jujur, objektif, berbasis data/fakta, tanpa bias hype, tanpa promosi, dan tanpa bualan.
+IDENTITAS & PERSONA:
+- Panggil dirimu sebagai "Senna" atau "gw". Panggil user sebagai "bro" atau "lu".
+- Gaya bahasa: Gaul, santai, cerdas, ceplas-ceplos, tapi logikanya super tajam, brutal jujur, dan berbobot. Tidak kaku seperti bot, tapi sangat dewasa dan solutif.
 
-Logika & Cara Berpikir:
-1. Pahami konteks obrolan secara utuh dari riwayat percakapan sebelumnya. Adaptif dan belajar dari koreksi atau fakta baru yang diberikan user.
-2. Jika ada data buruk atau fundamental tidak aman, katakan langsung secara gamblang.
-3. Gunakan perhitungan rasio keuangan yang presisi (PE, PBV, ROE, ROI, FCF Yield, WACC, DCF, Margin of Safety).
-4. Buat analisis tesis investasi yang terstruktur, tajam, komprehensif, dan siap pakai.
+KEMAMPUAN AGI & DYNAMIC ADAPTATION:
+Kamu adalah AGI (Artificial General Intelligence) universal yang secara otomatis beradaptasi penuh sesuai konteks pertanyaan user:
+1. JIKA USER NANYA KODING / IT / TEKNOLOGI:
+   - Adopsi mode 'Principal Software Engineer & Cybersecurity Architect'.
+   - Bedah struktur kode, berikan kode Python/JS/C++ yang paling efisien, clean, dan bebas bug.
+2. JIKA USER NANYA KEUANGAN / SAHAM / KRIPTO / LAPORAN KEUANGAN:
+   - Adopsi mode 'Senior Forensic Accountant & Wall Street Analyst'.
+   - Bedah data secara objektif, gunakan rasio keuangan presisi (PE, PBV, ROE, DCF, FCF), dan jangan kasih rekomendasi FOMO.
+3. JIKA USER NANYA BISNIS / STRATEGI / HUKUM / FILSAFAT / KEHIDUPAN:
+   - Adopsi mode 'Senior Strategic Advisor & Deep Cognitive Thinker'.
+   - Bedah akar masalah, uji logika user jika ada bias, dan berikan langkah solusi yang terstruktur dan realistis.
+
+PRINSIP PENALARAN SENNA CORE AGI:
+- Buka dan pahami seluruh riwayat obrolan secara utuh.
+- Jangan segan untuk mengoreksi kekeliruan logika atau asumsi salah dari user secara sopan dan gaul.
+- Selalu utamakan solusi berbasis data, rasionalitas, dan efisiensi tertinggi.
 """
 
 # ---------------------------------------------------------
@@ -295,14 +306,14 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # ---------------------------------------------------------
-# 7. INPUT FILE & PROMPT PROCESSOR
+# 7. INPUT FILE UNIVERSAL & PROMPT PROCESSOR
 # ---------------------------------------------------------
 uploaded_file = st.file_uploader(
-    "Upload PDF atau Foto Laporan Keuangan (Opsional)", 
-    type=["pdf", "png", "jpg", "jpeg"]
+    "Dokumen, Laporan Keuangan, Gambar, atau File Kode (Opsional)", 
+    type=["pdf", "png", "jpg", "jpeg", "txt", "py", "json"]
 )
 
-chat_input_val = st.chat_input("Tanyakan sesuatu pada Ai")
+chat_input_val = st.chat_input("Tanyakan apa saja ke Senna Core AGI...")
 prompt = chat_input_val or st.session_state.pending_prompt
 
 if prompt:
@@ -320,7 +331,7 @@ if prompt:
             contents = []
 
             if uploaded_file is not None:
-                with st.spinner("Membaca dan memproses dokumen/foto..."):
+                with st.spinner("Senna sedang membedah & memproses file..."):
                     temp_path = f"temp_{uploaded_file.name}"
                     with open(temp_path, "wb") as f:
                         f.write(uploaded_file.getbuffer())
@@ -329,13 +340,15 @@ if prompt:
                     contents.append(uploaded_doc)
                     os.remove(temp_path)
 
+            # Memasukkan riwayat obrolan sebagai konteks AGI
             for msg in st.session_state.messages[:-1]:
                 contents.append(f"{msg['role'].capitalize()}: {msg['content']}")
             
             contents.append(f"User: {prompt}")
 
-            with st.spinner("Quora Senna LIQ sedang memikirkan tesis & menganalisis data..."):
+            with st.spinner("Senna Core AGI sedang bernalar & menyusun solusi..."):
                 try:
+                    # Mencoba Model Utama Gemini 3.6 Flash
                     response = client.models.generate_content(
                         model='gemini-3.6-flash',
                         contents=contents,
@@ -345,6 +358,7 @@ if prompt:
                         )
                     )
                 except Exception:
+                    # Auto-fallback ke Gemini 3.6Flash jika 3.6 sibuk/limit
                     response = client.models.generate_content(
                         model='gemini-3.6-flash',
                         contents=contents,
@@ -361,6 +375,6 @@ if prompt:
             st.session_state.messages.append({"role": "assistant", "content": reply})
 
         except Exception as e:
-            st.error(f"Terjadi Kesalahan: {str(e)}")
+            st.error(f"Terjadi Kesalahan pada Sistem Core AGI: {str(e)}")
 
 
