@@ -54,8 +54,8 @@ client = OpenAI(
     api_key=api_key,
 )
 
-# Model ID resmi sesuai dokumentasi OpenRouter untuk Gemma 4 24B
-MODEL_ID = "google/gemma-4-24b-a4b-it:free"
+# Model ID resmi OpenRouter (Menggunakan Gemma 4 26B Free)
+MODEL_ID = "google/gemma-4-26b-a4b-it:free"
 
 # ---------------------------------------------------------
 # 3. SIDEBAR - TAMPILAN DIGITAL AI QUORA (AVATAR & PROFILE)
@@ -89,10 +89,10 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. FUNGSI EKSEKUSI AGEN (SWARM ENGINE)
+# 4. FUNGSI EKSEKUSI AGEN (SWARM ENGINE WITH FALLBACK)
 # ---------------------------------------------------------
 def run_agent_task(system_prompt: str, user_prompt: str) -> str:
-    """Fungsi helper untuk memanggil API OpenRouter dengan model Gemma 4 24B"""
+    """Fungsi helper dengan sistem Fallback otomatis jika model utama error"""
     try:
         response = client.chat.completions.create(
             model=MODEL_ID,
@@ -106,14 +106,25 @@ def run_agent_task(system_prompt: str, user_prompt: str) -> str:
             }
         )
         return response.choices[0].message.content
-    except Exception as e:
-        return f"Error pada ekskusi agen: {str(e)}"
+    except Exception as primary_error:
+        # Auto-fallback jika model spesifik bermasalah
+        try:
+            fallback_response = client.chat.completions.create(
+                model="openrouter/free",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ]
+            )
+            return fallback_response.choices[0].message.content
+        except Exception as fallback_error:
+            return f"Error pada eksekusi agen: {str(primary_error)} | Fallback Error: {str(fallback_error)}"
 
 # ---------------------------------------------------------
 # 5. UI UTAMA & INTERAKSI USER
 # ---------------------------------------------------------
 st.title("🌐 Quora Senna Core AGI - Multi-Agent System")
-st.caption("Kawanan Agen AI Mandiri Berbasiskan Google Gemma 4 24B (OpenRouter Engine)")
+st.caption("Kawanan Agen AI Mandiri Berbasiskan OpenRouter Engine")
 
 domain_choice = st.selectbox(
     "🎯 Pilih Domain / Topik Analisis:",
@@ -137,7 +148,6 @@ if st.button("🚀 Jalankan Kawanan AI (Start Swarm)", type="primary"):
     if not user_query.strip():
         st.warning("Silakan masukkan pertanyaan atau data terlebih dahulu!")
     else:
-        # Container hasil kerja bertahap
         st.divider()
         st.subheader("⚡ Kawanan Agen AI Mulai Bekerja...")
         
@@ -161,7 +171,7 @@ if st.button("🚀 Jalankan Kawanan AI (Start Swarm)", type="primary"):
             # --- AGENT 2: ANALYST ---
             st.write("🧠 **[Agent 2: Senna-Analyst]** Menganalisis temuan data & menyusun kalkulasi/metrik...")
             prompt_analyst = f"""
-            Kamu adalah Agent 2 (Senna-Analyst) dari Quora AGI Swarm.
+            Kamu meupakan Agent 2 (Senna-Analyst) dari Quora AGI Swarm.
             Domain tugas: {domain_choice}.
             Berikut adalah data riset dari Agent 1:
             ---
