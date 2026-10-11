@@ -1,3 +1,4 @@
+import datetime
 import streamlit as st
 from openai import OpenAI
 
@@ -11,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom Styling CSS untuk tampilan UI futuristik
+# Custom Styling CSS
 st.markdown("""
     <style>
     .stApp {
@@ -34,9 +35,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. SETUP OPENROUTER CLIENT
+# 2. SETUP TIME & OPENROUTER CLIENT
 # ---------------------------------------------------------
-# Mengambil API Key dari Streamlit Secrets atau Sidebar Input
+# Mendapatkan tanggal hari ini secara otomatis dalam format Indonesia
+now = datetime.datetime.now()
+CURRENT_DATE_STR = now.strftime("%d %B %Y") # Contoh: 11 October 2026
+
 api_key = st.secrets.get("OPENROUTER_API_KEY", None)
 
 if not api_key:
@@ -48,17 +52,15 @@ if not api_key:
     st.info("💡 Silakan masukkan OpenRouter API Key kamu di sidebar untuk memulai.")
     st.stop()
 
-# Client OpenAI disesuaikan ke Endpoint OpenRouter
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=api_key,
 )
 
-# Model ID resmi OpenRouter (Menggunakan Gemma 4 26B Free)
 MODEL_ID = "google/gemma-4-26b-a4b-it:free"
 
 # ---------------------------------------------------------
-# 3. SIDEBAR - TAMPILAN DIGITAL AI QUORA (AVATAR & PROFILE)
+# 3. SIDEBAR - TAMPILAN DIGITAL AI QUORA
 # ---------------------------------------------------------
 with st.sidebar:
     st.image(
@@ -68,6 +70,7 @@ with st.sidebar:
     )
     st.title("🛡️ Quora AGI Core")
     st.markdown("**Status Engine:** `ONLINE` 🟢")
+    st.markdown(f"**Waktu Sistem:** `{CURRENT_DATE_STR}`")
     st.markdown(f"**Model:** `{MODEL_ID}`")
     st.divider()
     
@@ -76,28 +79,36 @@ with st.sidebar:
     st.markdown("""
     <div class="agent-card">
         <div class="agent-title">🔍 Agent 1: Senna-Researcher</div>
-        <small>Spesialis Pengumpul Data, Fakta, & Riset Fundamental</small>
+        <small>Pengumpul Data, Informasi & Konsep Utama</small>
     </div>
     <div class="agent-card">
         <div class="agent-title">🧠 Agent 2: Senna-Analyst</div>
-        <small>Analis Kuantitatif, Ekonomi, Sains & Pasar Modal</small>
+        <small>Analis Spesialis Sesuai Domain Topik</small>
     </div>
     <div class="agent-card">
         <div class="agent-title">⚔️ Agent 3: Quora-Strategist</div>
-        <small>Pengambil Keputusan, Sintesis Final & Eksekutor</small>
+        <small>Sintesis Eksekutif & Pengambil Keputusan Final</small>
     </div>
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. FUNGSI EKSEKUSI AGEN (SWARM ENGINE WITH FALLBACK)
+# 4. FUNGSI EKSEKUSI AGEN
 # ---------------------------------------------------------
 def run_agent_task(system_prompt: str, user_prompt: str) -> str:
-    """Fungsi helper dengan sistem Fallback otomatis jika model utama error"""
+    """Fungsi helper pemanggilan API dengan injection Waktu Hari Ini"""
+    
+    # Inject waktu saat ini ke dalam system prompt agar AI sadar waktu sekarang
+    time_awareness_prompt = (
+        f"PERHATIAN TANGGAL SAKRAL: Waktu sistem saat ini adalah {CURRENT_DATE_STR} (Tahun 2026). "
+        f"Gunakan konteks waktu tahun 2026 dalam semua analisis dan jawabanmu.\n\n"
+        f"{system_prompt}"
+    )
+    
     try:
         response = client.chat.completions.create(
             model=MODEL_ID,
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": time_awareness_prompt},
                 {"role": "user", "content": user_prompt}
             ],
             extra_headers={
@@ -107,12 +118,11 @@ def run_agent_task(system_prompt: str, user_prompt: str) -> str:
         )
         return response.choices[0].message.content
     except Exception as primary_error:
-        # Auto-fallback jika model spesifik bermasalah
         try:
             fallback_response = client.chat.completions.create(
                 model="openrouter/free",
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": time_awareness_prompt},
                     {"role": "user", "content": user_prompt}
                 ]
             )
@@ -124,14 +134,14 @@ def run_agent_task(system_prompt: str, user_prompt: str) -> str:
 # 5. UI UTAMA & INTERAKSI USER
 # ---------------------------------------------------------
 st.title("🌐 Quora Senna Core AGI - Multi-Agent System")
-st.caption("Kawanan Agen AI Mandiri Berbasiskan OpenRouter Engine")
+st.caption(f"Kawanan Agen AI Mandiri Berbasiskan OpenRouter Engine (System Date: {CURRENT_DATE_STR})")
 
 domain_choice = st.selectbox(
     "🎯 Pilih Domain / Topik Analisis:",
     [
         "📈 Investasi & Pasar Modal (Saham, Crypto, Value Investing)",
         "💰 Keuangan & Makroekonomi",
-        "🔬 Sains & Teknologi Tinggi (AI, Semi-konduktor, Fisika)",
+        "🔬 Sains & Teknologi Tinggi (AI, Semikonduktor, Fisika)",
         "💻 Pemrograman & Arsitektur Software",
         "📚 Filsafat, Behavioral Psychology & Keputusan Strategis",
         "🔮 Umum / Eksplorasi Bebas"
@@ -139,14 +149,14 @@ domain_choice = st.selectbox(
 )
 
 user_query = st.text_area(
-    "💬 Masukkan Pertanyaan / Problem yang Ingin Diselesaikan oleh Swarm Agen:",
-    placeholder="Contoh: Buatkan analisis mendalam prospek adopsi AI pada sektor teknologi semikonduktor & dampaknya terhadap strategi alokasi portofolio investasi.",
+    "💬 Masukkan Pertanyaan:",
+    placeholder="Masukkan topik atau pertanyaan kamu di sini...",
     height=120
 )
 
 if st.button("🚀 Jalankan Kawanan AI (Start Swarm)", type="primary"):
     if not user_query.strip():
-        st.warning("Silakan masukkan pertanyaan atau data terlebih dahulu!")
+        st.warning("Silakan masukkan pertanyaan terlebih dahulu!")
     else:
         st.divider()
         st.subheader("⚡ Kawanan Agen AI Mulai Bekerja...")
@@ -154,72 +164,69 @@ if st.button("🚀 Jalankan Kawanan AI (Start Swarm)", type="primary"):
         with st.status("Proses Kolaborasi Multi-Agent Sedang Berjalan...", expanded=True) as status:
             
             # --- AGENT 1: RESEARCHER ---
-            st.write("🔍 **[Agent 1: Senna-Researcher]** Sedang membedah domain & mengumpulkan fakta kunci...")
+            st.write("🔍 **[Agent 1: Senna-Researcher]** Membedah konteks domain & mengumpulkan data...")
+            sys_researcher = f"Kamu adalah Agent 1 (Senna-Researcher) spesialis domain {domain_choice}. Tugasmu fokus mengumpulkan fakta, struktur dasar, dan data kunci yang relevan."
             prompt_researcher = f"""
-            Kamu adalah Agent 1 (Senna-Researcher) dari Quora AGI Swarm.
-            Domain tugas: {domain_choice}.
-            Tugasmu: Kumpulkan data mentah, konsep utama, fakta penting, dan variabel kunci terkait topik user berikut:
-            "{user_query}"
-            Jawab dengan ringkas, padat fakta, dan terstruktur.
+            Domain: {domain_choice}
+            Waktu Saat Ini: {CURRENT_DATE_STR}
+            Topik User: "{user_query}"
+            
+            Instruksi: Kumpulkan poin-poin riset, konsep utama, dan fakta tepercaya sesuai domain {domain_choice}.
             """
-            result_research = run_agent_task(
-                "Kamu adalah Senior Researcher AI yang sangat objektif dan berbasis fakta.",
-                prompt_researcher
-            )
+            result_research = run_agent_task(sys_researcher, prompt_researcher)
             st.success("✅ Agent 1 Selesai!")
             
             # --- AGENT 2: ANALYST ---
-            st.write("🧠 **[Agent 2: Senna-Analyst]** Menganalisis temuan data & menyusun kalkulasi/metrik...")
+            st.write("🧠 **[Agent 2: Senna-Analyst]** Menganalisis temuan sesuai kepakaran domain...")
+            sys_analyst = f"Kamu adalah Agent 2 (Senna-Analyst) pakar di bidang {domain_choice}. Tugasmu menganalisis logika, kerangka kerja, atau pola sesuai konteks domain tersebut."
             prompt_analyst = f"""
-            Kamu meupakan Agent 2 (Senna-Analyst) dari Quora AGI Swarm.
-            Domain tugas: {domain_choice}.
-            Berikut adalah data riset dari Agent 1:
+            Domain: {domain_choice}
+            Waktu Saat Ini: {CURRENT_DATE_STR}
+            Data dari Agent 1:
             ---
             {result_research}
             ---
-            Tugasmu: Lakukan analisis mendalam (fundamental, logika, matematika, psikologi pasar, atau sains) dari data riset di atas. Evaluasi risiko, peluang, dan pola dari topik tersebut.
+            
+            Instruksi: Lakukan analisis mendalam berdasarkan metode yang relevan dengan domain {domain_choice}. Jangan memaksakan analisis keuangan jika topiknya adalah Sains, Coding, atau Filsafat!
             """
-            result_analysis = run_agent_task(
-                "Kamu adalah Senior Financial & Scientific Quantitative Analyst.",
-                prompt_analyst
-            )
+            result_analysis = run_agent_task(sys_analyst, prompt_analyst)
             st.success("✅ Agent 2 Selesai!")
             
             # --- AGENT 3: STRATEGIST / QUORA CORE ---
-            st.write("⚔️ **[Agent 3: Quora-Strategist]** Menyusun rekomendasi akhir & sintesis eksekutif...")
+            st.write("⚔️ **[Agent 3: Quora-Strategist]** Menyusun sintesis eksekutif & jawaban akhir...")
+            sys_strategist = f"Kamu adalah Agent 3 (Quora-Strategist), sintesis eksekutif dari Quora AGI Swarm untuk domain {domain_choice}."
             prompt_strategist = f"""
-            Kamu adalah Agent 3 (Quora-Strategist), pemikir utama dan sintesis eksekutif dari Quora Senna Core AGI Swarm.
-            Berdasarkan hasil analisis berikut:
+            Domain: {domain_choice}
+            Waktu Saat Ini: {CURRENT_DATE_STR}
+            Hasil Analisis Agent 2:
             ---
             {result_analysis}
             ---
-            Tugasmu: Buatkan ringkasan keputusan eksekutif, rekomendasi konkret/langkah aksi, serta kesimpulan akhir yang tajam, mudah dipahami, dan actionable untuk user.
+            
+            Instruksi: Susun jawaban akhir yang utuh, solutif, terstruktur, dan siap dieksekusi oleh user sesuai konteks {domain_choice}.
             """
-            result_final = run_agent_task(
-                "Kamu adalah Quora-Strategist, pembuat keputusan puncak dan arsitek strategi AGI.",
-                prompt_strategist
-            )
+            result_final = run_agent_task(sys_strategist, prompt_strategist)
             st.success("✅ Agent 3 Selesai!")
             
             status.update(label="✨ Seluruh Kawanan Agen Selesai Bekerja!", state="complete", expanded=False)
 
         # ---------------------------------------------------------
-        # TAMPILAN TAB UNTUK HASIL MULTI-AGENT
+        # TAMPILAN TAB HASIL
         # ---------------------------------------------------------
         st.subheader("📊 Laporan Hasil Kerja Multi-Agent System")
         
         tab_final, tab_analysis, tab_research = st.tabs([
-            "🎯 Rekomendasi Eksekutif (Quora-Strategist)",
+            "🎯 Jawaban / Strategi Akhir (Quora-Strategist)",
             "🧠 Analisis Mendalam (Senna-Analyst)",
             "🔍 Data & Riset Mentah (Senna-Researcher)"
         ])
         
         with tab_final:
-            st.markdown("### 👑 Keputusan & Strategi Akhir")
+            st.markdown("### 👑 Keputusan / Jawaban Akhir")
             st.success(result_final)
             
         with tab_analysis:
-            st.markdown("### 📐 Analisis Penalaran & Kuantitatif")
+            st.markdown("### 📐 Analisis Penalaran Domain")
             st.info(result_analysis)
             
         with tab_research:
