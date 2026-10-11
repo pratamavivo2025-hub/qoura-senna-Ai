@@ -31,10 +31,10 @@ st.markdown("""
         font-size: 16px;
     }
     </style>
-""", unsafe_allow_allow_html=True)
+""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 2. SETUP OPENROUTER CLIENT (Sesuai Instruksi Gambar)
+# 2. SETUP OPENROUTER CLIENT
 # ---------------------------------------------------------
 # Mengambil API Key dari Streamlit Secrets atau Sidebar Input
 api_key = st.secrets.get("OPENROUTER_API_KEY", None)
@@ -89,7 +89,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# 4. FUNGSI EKSKUSI AGEN (SWARM ENGINE)
+# 4. FUNGSI EKSEKUSI AGEN (SWARM ENGINE)
 # ---------------------------------------------------------
 def run_agent_task(system_prompt: str, user_prompt: str) -> str:
     """Fungsi helper untuk memanggil API OpenRouter dengan model Gemma 4 24B"""
@@ -212,6 +212,6 @@ if st.button("🚀 Jalankan Kawanan AI (Start Swarm)", type="primary"):
             st.markdown("### 📐 Analisis Penalaran & Kuantitatif")
             st.info(result_analysis)
             
-        with tab_tab_research if 'tab_tab_research' in locals() else tab_research:
+        with tab_research:
             st.markdown("### 📋 Temuan Data Kunci")
             st.write(result_research)
