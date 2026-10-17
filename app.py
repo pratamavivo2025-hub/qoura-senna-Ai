@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -7,11 +8,11 @@ import requests
 import streamlit as st
 
 # =========================================================
-# QUORA AI 2.5 — GLASS RESEARCH WORKSPACE
+# QUORA AI 3.0 — GLASS INTELLIGENCE WORKSPACE
 # =========================================================
 
 st.set_page_config(
-    page_title="Quora AI | Research Workspace",
+    page_title="Quora AI 3.0 | Glass Intelligence Workspace",
     page_icon="Q",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -50,7 +51,7 @@ TOPICS = {
         {"name": "Senna Code Auditor", "icon": ":material/bug_report:", "role": "Auditor bug, keamanan, edge case, dan klaim teknis yang belum diuji.", "personality": "Teliti, selalu mencari cara solusi bisa gagal.", "mission": "Cari kasus tepi, kegagalan API, penanganan error, dan risiko kebocoran rahasia."},
         {"name": "Senna Architect", "icon": ":material/schema:", "role": "Arsitek sistem: struktur, maintainability, performa, dan skalabilitas.", "personality": "Sistematis, berorientasi jangka panjang, sadar kompromi desain.", "mission": "Bandingkan opsi arsitektur dan jelaskan trade-off tanpa menambah kompleksitas sia-sia."},
     ],
-    "Filsafat & Psikologi Perilaku": [
+    "Psikologi Perilaku": [
         {"name": "Senna Philosopher", "icon": ":material/psychology_alt:", "role": "Pemeriksa konsep, definisi, premis, validitas argumen, dan implikasi filosofis.", "personality": "Kontemplatif, konseptual, teliti pada definisi, tahan ambiguitas.", "mission": "Perjelas asumsi tersembunyi. Bedakan pertanyaan empiris, logis, etis, dan metafisik."},
         {"name": "Senna Behavioral Analyst", "icon": ":material/neurology:", "role": "Analis bias kognitif, perilaku kelompok, motivasi, dan penelitian psikologi.", "personality": "Observasional, skeptis terhadap penjelasan tunggal, peka konteks.", "mission": "Gunakan teori secara hati-hati. Jangan mendiagnosis atau menganggap satu teori menjelaskan semua perilaku."},
         {"name": "Senna Critical Thinker", "icon": ":material/psychology:", "role": "Penguji kontradiksi, sesat pikir, dan kekuatan inferensi.", "personality": "Dialektis, menantang kedua kubu, lebih peduli validitas daripada kemenangan debat.", "mission": "Uji posisi utama dan lawannya dengan standar yang sama."},
@@ -75,6 +76,16 @@ STANDAR QUORA AI:
 - Jangan menyamakan korelasi dengan sebab-akibat.
 - Utamakan akurasi dan penjelasan yang masuk akal daripada kesan pintar.
 - Bahasa Indonesia yang jelas. Jangan mengisi jawaban dengan pengulangan.
+- PROTOKOL PENALARAN: uraikan pertanyaan menjadi klaim/subpertanyaan; identifikasi asumsi;
+  nilai kualitas, relevansi, tanggal, dan keterlacakan bukti; uji penjelasan alternatif;
+  cari bukti yang dapat membantah kesimpulan; lalu simpulkan secara proporsional.
+- HIERARKI BUKTI: bedakan sumber primer, sumber sekunder berkualitas, opini, dan snippet pencarian.
+  Jangan memberi semua sumber bobot yang sama.
+- KALIBRASI: nyatakan keyakinan tinggi/sedang/rendah beserta alasannya; jangan membuat probabilitas
+  presisi tanpa dasar empiris yang memadai.
+- AUDIT KLAIM: tautkan klaim penting ke sumber yang benar-benar tersedia atau tandai sebagai inferensi.
+- Sajikan alasan ringkas yang dapat diaudit, bukan monolog penalaran internal yang panjang.
+- Jika bukti tidak cukup, jelaskan batasan dan informasi apa yang bisa mengubah kesimpulan.
 """
 
 # =========================================================
@@ -147,7 +158,7 @@ def _post_chat(messages, temperature, max_tokens):
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "https://streamlit.io",
-        "X-Title": "Quora AI Research Workspace",
+        "X-Title": "Quora AI 3.0 Glass Intelligence Workspace",
     }
     try:
         response = requests.post(OPENROUTER_URL, headers=headers, json=payload, timeout=180)
@@ -228,8 +239,11 @@ MANDAT: {agent['mission']}
 Waktu saat prompt dibuat: {timestamp}.
 Analisis secara independen. Jangan menebak pendapat agen lain.
 Jangan menentang hanya agar terlihat berbeda; kritik harus beralasan.
-Struktur: temuan utama; alasan/bukti; kritik atau alternatif; ketidakpastian.
-Gunakan ID sumber [S1] dst. hanya jika benar-benar mendukung klaim.
+Ikuti protokol: (1) jawab inti pertanyaan, (2) pisahkan fakta dari inferensi/asumsi,
+(3) nilai kekuatan dan relevansi sumber, (4) uji penjelasan tandingan terbaik,
+(5) nyatakan yang belum diketahui dan tingkat keyakinan beserta alasannya.
+Struktur: Temuan utama; Bukti dan penalaran ringkas; Uji tandingan; Ketidakpastian.
+Gunakan ID sumber [S1] dst. hanya jika benar-benar mendukung klaim. Jangan mengarang data.
 """
     user_prompt = f"""
 PERTANYAAN:
@@ -255,10 +269,11 @@ Karakter: independen, adil, skeptis terhadap semua agen, dan tidak sekadar menye
 
 Waktu prompt: {timestamp}.
 
-Audit: bandingkan klaim penting; temukan konflik dan asumsi tersembunyi;
-cek apakah ID sumber tersedia; tandai klaim yang tidak didukung atau terlalu yakin;
-jangan mengarang fakta untuk menyelesaikan konflik; jangan mengklaim telah membuka
-halaman penuh jika yang tersedia hanya snippet; pertahankan ketidakpastian bila perlu.
+Audit multi-langkah: pecah kesimpulan menjadi klaim penting; bandingkan bukti yang mendukung
+dan menentang; cari konflik, asumsi tersembunyi, dan penjelasan alternatif; nilai relevansi
+serta keterlacakan sumber; tandai klaim yang tidak didukung atau terlalu yakin.
+Jangan mengarang fakta untuk menyelesaikan konflik atau mengklaim membaca halaman penuh
+jika yang tersedia hanya snippet; pertahankan ketidakpastian bila perlu.
 
 Format:
 ## Kesimpulan utama
@@ -280,9 +295,53 @@ PAKET SUMBER:
 HASIL AGEN:
 {json.dumps(agent_results, ensure_ascii=False, indent=2)}
 
-Audit secara kritis dan susun jawaban akhir.
+Audit secara kritis dan susun jawaban akhir. Jangan sekadar merangkum atau mengambil suara mayoritas.
+Jika agen berbeda pendapat, jelaskan titik sengketa dan bukti mana yang lebih kuat.
+Akhiri dengan kesimpulan terkalibrasi, batasan utama, dan langkah verifikasi berikutnya bila relevan.
 """
     return call_model(system_prompt, user_prompt, temperature=0.15, max_tokens=3600)
+
+# =========================================================
+# SMART ENTITY TAGS — INLINE RECOGNITION
+# =========================================================
+
+SMART_ENTITIES = [
+    "confirmation bias", "bias konfirmasi", "cognitive bias", "bias kognitif",
+    "opportunity cost", "margin of safety", "free cash flow", "discounted cash flow",
+    "capital allocation", "compound interest", "compounding", "drawdown",
+    "volatility", "liquidity", "inflation", "interest rates", "suku bunga",
+    "Bitcoin", "Ethereum", "BTC", "ETH", "TSMC", "ASML", "NVIDIA", "Nvidia",
+    "Apple", "Microsoft", "Alphabet", "Google", "Tesla", "BNY", "OpenRouter",
+    "Tavily", "GDP", "PDB", "ROIC", "ROE", "EPS", "IPO", "ETF", "SPY",
+    "falsifiability", "correlation", "causation", "korelasi", "kausalitas",
+    "Bayesian", "Bayes", "game theory", "teori permainan", "network effect",
+    "switching costs", "competitive advantage", "keunggulan kompetitif",
+    "valuation", "valuasi", "risk premium", "premi risiko", "supply chain",
+    "rantai pasok", "epistemology", "epistemologi", "metacognition", "metakognisi",
+    "price-to-earnings", "P/E ratio", "DCF",
+]
+
+def render_smart_markdown(text):
+    """Add subtle chips to recognized terms while leaving code spans untouched."""
+    if not text:
+        return text
+    parts = re.split(r"(```[\s\S]*?```|`[^`\n]*`)", text)
+    pattern = re.compile(
+        r"(?<![\w])(" + "|".join(
+            re.escape(term) for term in sorted(set(SMART_ENTITIES), key=len, reverse=True)
+        ) + r")(?![\w])",
+        flags=re.IGNORECASE,
+    )
+    for i in range(0, len(parts), 2):
+        parts[i] = pattern.sub(
+            lambda match: (
+                '<span class="entity-chip" title="Istilah terdeteksi otomatis">'
+                + match.group(0) + '</span>'
+            ),
+            parts[i],
+        )
+    return "".join(parts)
+
 
 # =========================================================
 # SESSION STATE
@@ -350,6 +409,87 @@ small, .muted, [data-testid="stCaptionContainer"] {
 [data-testid="stSidebar"] > div:first-child {
   background: transparent;
 }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2 {
+  display: inline-block;
+  padding: .45rem .72rem;
+  border: 1px solid rgba(220,230,255,.16);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.035));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 25px rgba(0,0,0,.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  letter-spacing: -.045em;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] {
+  gap: .32rem;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: .48rem .65rem;
+  background: rgba(255,255,255,.012);
+  transition: background .2s ease, border-color .2s ease, transform .2s ease;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label > div:first-child {
+  display: none !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+  background: rgba(255,255,255,.045);
+  border-color: rgba(220,230,255,.08);
+  transform: translateX(2px);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked),
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has([aria-checked="true"]) {
+  background: linear-gradient(110deg, rgba(151,169,255,.16), rgba(255,255,255,.045));
+  border: 1px solid rgba(190,204,255,.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 6px 22px rgba(0,0,0,.10);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has([aria-checked="true"]) [data-testid="stMarkdownContainer"] {
+  color: #e9edff !important;
+}
+[data-testid="stSidebar"] [data-testid="stRadio"] label [data-testid="stMarkdownContainer"] {
+  color: #929bad;
+  transition: color .2s ease;
+}
+.agent-stack {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: .1rem .15rem;
+}
+.agent-avatar {
+  width: 29px;
+  height: 29px;
+  margin-left: -7px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e9edff;
+  font-size: .65rem;
+  font-weight: 650;
+  border: 1px solid rgba(220,230,255,.26);
+  background: linear-gradient(145deg, rgba(159,176,255,.28), rgba(255,255,255,.055));
+  box-shadow: 0 3px 12px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.entity-chip {
+  display: inline-block;
+  vertical-align: baseline;
+  padding: .03rem .38rem .08rem;
+  margin: 0 .035rem;
+  border-radius: 7px;
+  color: #dce4ff;
+  border: 1px solid rgba(165,183,255,.19);
+  background: linear-gradient(135deg, rgba(139,158,255,.13), rgba(255,255,255,.035));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+  font-size: .94em;
+}
+
 .hero {
   position: relative;
   overflow: hidden;
@@ -417,21 +557,24 @@ div[data-testid="stChatMessage"] {
 div[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
   margin-left: auto;
   max-width: 86%;
-  background: linear-gradient(130deg, rgba(111,132,255,.19), rgba(99,117,181,.09));
-  border-color: rgba(151,166,255,.20);
+  background: linear-gradient(130deg, rgba(111,132,255,.19), rgba(99,117,181,.07));
+  border-color: rgba(151,166,255,.23);
+  box-shadow: 0 12px 32px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.075);
   border-top-right-radius: 7px;
 }
 div[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-assistant"]) {
   margin-right: auto;
   max-width: 100%;
-  background: rgba(255,255,255,.025);
+  background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
+  border-color: rgba(215,225,255,.12);
   border-top-left-radius: 7px;
+  box-shadow: 0 12px 34px rgba(0,0,0,.12), inset 0 1px 0 rgba(255,255,255,.055);
 }
 [data-testid="stChatInput"] {
   border: 1px solid rgba(177,194,255,.20) !important;
   border-radius: 20px !important;
-  background: rgba(15,20,33,.78) !important;
-  box-shadow: 0 0 0 1px rgba(120,140,255,.025), 0 0 30px rgba(105,125,255,.06);
+  background: linear-gradient(135deg, rgba(22,28,45,.88), rgba(13,17,28,.74)) !important;
+  box-shadow: 0 0 0 1px rgba(120,140,255,.035), 0 12px 38px rgba(0,0,0,.24), 0 0 34px rgba(105,125,255,.09), inset 0 1px 0 rgba(255,255,255,.055);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
 }
@@ -489,7 +632,7 @@ hr { border-color: rgba(255,255,255,.08) !important; }
 
 with st.sidebar:
     st.markdown("## QUORA **AI**")
-    st.caption("RESEARCH WORKSPACE · 2.5")
+    st.caption("GLASS INTELLIGENCE WORKSPACE · 3.0")
     st.divider()
 
     page_options = {
@@ -532,7 +675,7 @@ with st.sidebar:
 # =========================================================
 
 if page == "Evidence Standard":
-    st.markdown('<div class="hero"><div class="hero-label">RESEARCH PROTOCOL</div><h1>Evidence over assumptions.</h1><div class="hero-subtitle">Standar bukti, transparansi, dan evaluasi klaim.</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="hero-label">RESEARCH PROTOCOL · 3.0</div><h1>Evidence over assumptions.</h1><div class="hero-subtitle">Standar bukti, transparansi, dan evaluasi klaim.</div></div>', unsafe_allow_html=True)
     standards = [
         ("Independensi", "Agen tidak menyetujui pengguna atau agen lain tanpa alasan yang dapat dijelaskan."),
         ("Objektivitas", "Bukti yang mendukung dan menentang diperiksa dengan standar yang sama."),
@@ -554,7 +697,7 @@ if page == "Evidence Standard":
 # =========================================================
 
 elif page == "Agent Registry":
-    st.markdown('<div class="hero"><div class="hero-label">PERSONALITY REGISTRY</div><h1>Different mandates. Independent minds.</h1><div class="hero-subtitle">18 profil kerja di enam bidang. Karakter adalah gaya penalaran yang diarahkan oleh instruksi, bukan klaim kesadaran.</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="hero-label">PERSONALITY REGISTRY</div><h1>Different mandates. Stronger audits.</h1><div class="hero-subtitle">18 profil kerja di enam bidang. Karakter adalah gaya penalaran yang diarahkan oleh instruksi, bukan klaim kesadaran.</div></div>', unsafe_allow_html=True)
     for topic, agents in TOPICS.items():
         with st.expander(topic, expanded=(topic == selected_topic)):
             for agent in agents:
@@ -578,7 +721,7 @@ elif page == "Model & System":
         st.markdown("**Web search**")
         st.write("Tavily aktif" if get_secret("TAVILY_API_KEY") else "Tavily belum aktif — tambahkan TAVILY_API_KEY di Streamlit Secrets.")
         st.markdown("**Pipeline per pertanyaan**")
-        st.write("1 pencarian web + 3 analisis independen + 1 cross-agent review. Jika output terpotong, tiap panggilan model dapat melakukan maksimal 2 lanjutan.")
+        st.write("1 pencarian web + 3 analisis independen + 1 cross-agent review. Protokol 3.0 menekankan pemecahan klaim, bukti tandingan, kalibrasi keyakinan, dan audit sumber. Jika output terpotong, tiap panggilan model dapat melakukan maksimal 2 lanjutan.")
         st.markdown("**Secret checks**")
         st.write("OPENROUTER_API_KEY:", "Terdeteksi" if get_secret("OPENROUTER_API_KEY") else "Belum ditemukan")
         st.write("TAVILY_API_KEY:", "Terdeteksi" if get_secret("TAVILY_API_KEY") else "Belum ditemukan")
@@ -589,7 +732,7 @@ elif page == "Model & System":
 # =========================================================
 
 else:
-    st.markdown('<div class="hero"><div class="hero-label">QUORA AI / RESEARCH CORE 2.5</div><h1>Think deeper. Verify better.</h1><div class="hero-subtitle">Independent analysis, web research, cross-agent review — presented in a quieter, glass-inspired workspace.</div></div>', unsafe_allow_html=True)
+    st.markdown('<div class="hero"><div class="hero-label">QUORA AI / GLASS INTELLIGENCE CORE 3.0</div><h1>Think deeper. Verify better.</h1><div class="hero-subtitle">Structured reasoning, adversarial evidence checks, web research, and cross-agent review — inside a layered glass workspace.</div></div>', unsafe_allow_html=True)
 
     col_a, col_b = st.columns([3, 1])
     with col_a:
@@ -598,10 +741,18 @@ else:
     with col_b:
         st.markdown(f"<div style='text-align:right;color:#9aa4b5;font-size:.8rem;padding-top:1rem'>{now_wib()}</div>", unsafe_allow_html=True)
 
-    with st.expander("Active agents"):
-        for agent in TOPICS[selected_topic]:
-            st.markdown(f"**{agent['name']}** · {agent['personality']}")
-            st.caption(agent["mission"])
+    agent_col, avatar_col = st.columns([4, 1], vertical_alignment="center")
+    with agent_col:
+        with st.expander("Active agents"):
+            for agent in TOPICS[selected_topic]:
+                st.markdown(f"**{agent['name']}** · {agent['personality']}")
+                st.caption(agent["mission"])
+    with avatar_col:
+        avatar_html = "".join(
+            f'<span class="agent-avatar" title="{agent["name"]}">{agent["name"].split()[-1][:2].upper()}</span>'
+            for agent in TOPICS[selected_topic]
+        )
+        st.markdown(f'<div class="agent-stack">{avatar_html}</div>', unsafe_allow_html=True)
 
     history = st.session_state.histories[selected_topic]
 
@@ -638,13 +789,13 @@ else:
                         if result.startswith("ERROR:"):
                             st.error(result)
                         else:
-                            st.markdown(result)
+                            st.markdown(render_smart_markdown(result), unsafe_allow_html=True)
                 with tabs[3]:
                     final_answer = item.get("final_answer", "")
                     if final_answer.startswith("ERROR:"):
                         st.error(final_answer)
                     elif final_answer:
-                        st.markdown(final_answer)
+                        st.markdown(render_smart_markdown(final_answer), unsafe_allow_html=True)
                     else:
                         st.info("Reviewer belum menghasilkan kesimpulan.")
             if item.get("completed_at"):
@@ -709,4 +860,4 @@ else:
         st.rerun()
 
     st.divider()
-    st.caption("QUORA AI 2.5 · AI-generated research can be wrong. Verify consequential claims against original sources.")
+    st.caption("QUORA AI 3.0 · AI-generated research can be wrong. Verify consequential claims against original sources.")
